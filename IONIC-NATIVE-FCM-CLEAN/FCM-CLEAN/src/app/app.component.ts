@@ -1,50 +1,61 @@
-import { Component } from '@angular/core';
+import { Component, ɵConsole } from '@angular/core';
 
 import { Platform } from '@ionic/angular';
 import { SplashScreen } from '@ionic-native/splash-screen/ngx';
 import { StatusBar } from '@ionic-native/status-bar/ngx';
 import { FCM } from '@ionic-native/fcm/ngx';
 import { LocalNotifications } from '@ionic-native/local-notifications/ngx';
-
+import { ApiCallService } from './core/services/api-call.service';
 
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
   styleUrls: ['app.component.scss']
 })
+
 export class AppComponent {
   constructor(
     private localNotifications: LocalNotifications,
     private fcm: FCM,
     private platform: Platform,
     private splashScreen: SplashScreen,
-    private statusBar: StatusBar
-  ) {
+    private statusBar: StatusBar,
+    public ApiCall : ApiCallService
+  )
+  {
     this.initializeApp();
   }
 
   initializeApp()
   {
-    var id = 0;//id de la notifcación, solo usada en pruebas
-
     this.platform.ready().then(() =>
     {
-      this.fcm.getToken().then(token => {
+      //variable usada en pruebas, evita que se pisen las notificaciones por tener el mismo id
+      var id = 0;
+      this.fcm.getToken().then(token =>
+      {
         console.log(token);
+        //IMPORTANTE -> usar dirección del servidor
+        this.ApiCall.sendToken("http://192.168.1.53/0020-PUSH-PRODU/PHP-FCM-SERVER-APP/src/index.php", token);
       });
 
-      this.fcm.onTokenRefresh().subscribe(token => {
+      this.fcm.onTokenRefresh().subscribe(token =>
+      {
         console.log(token);
+        //IMPORTANTE -> usar dirección del servidor
+        this.ApiCall.sendToken("http://192.168.1.53/0020-PUSH-PRODU/PHP-FCM-SERVER-APP/src/index.php", token);
       });
 
-      this.fcm.onNotification().subscribe(data => {
+      //Mandamos una petición a firebase para que nos mande un token
+      //de acceso, para ello nos subscribimos esperando dicha respuesta
+      this.fcm.onNotification().subscribe(data =>
+      {
         console.log('noti',data);
 
-        var result = data;   // get data in result variable
+        var result = data;  
         var items = JSON.stringify(result); // then convert data to json string
-        console.log(items);
         var allData = JSON.parse(items); // parse json data and pass json string
-
+        console.log(allData);
 
         if (data.wasTapped) {
           console.log('Received in background');
@@ -52,7 +63,7 @@ export class AppComponent {
         }else{
 
           console.log('Received in foreground');
-;
+
           id = id + 1;
           this.localNotifications.schedule({
             id: id,
@@ -62,11 +73,11 @@ export class AppComponent {
             //data: { secret: key }
           });
         };
-      },error =>{
+      }, error =>
+      {
         alert("error is "+JSON.stringify(error));
-
       });
-
+      //posibles subscripciones para implementar en un futuro
       //subscripciones a TOPICS
       //this.fcm.subscribeToTopic('people');
       //this.fcm.unsubscribeFromTopic('marketing');
